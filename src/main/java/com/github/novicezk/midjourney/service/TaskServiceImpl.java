@@ -23,9 +23,16 @@ public class TaskServiceImpl implements TaskService {
 	private final DiscordService discordService;
 	private final TaskQueueHelper taskQueueHelper;
 
+	/**
+	 * 提交绘图
+	 * @param task 任务信息
+	 * @param dataUrl 以图绘图地址
+	 * @return
+	 */
 	@Override
 	public SubmitResultVO submitImagine(Task task, DataUrl dataUrl) {
 		return this.taskQueueHelper.submitTask(task, () -> {
+			//以图绘图上传处理
 			if (dataUrl != null) {
 				String taskFileName = task.getId() + "." + MimeTypeUtils.guessFileSuffix(dataUrl.getMimeType());
 				Message<String> uploadResult = this.discordService.upload(taskFileName, dataUrl);

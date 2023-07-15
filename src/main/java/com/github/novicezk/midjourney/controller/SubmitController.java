@@ -52,28 +52,42 @@ public class SubmitController {
 	@ApiOperation(value = "提交Imagine任务")
 	@PostMapping("/imagine")
 	public SubmitResultVO imagine(@RequestBody SubmitImagineDTO imagineDTO) {
+		//获取关键词
 		String prompt = imagineDTO.getPrompt();
+		//判空
 		if (CharSequenceUtil.isBlank(prompt)) {
 			return SubmitResultVO.fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空");
 		}
+		//去空格
 		prompt = prompt.trim();
+		//新建一个任务
 		Task task = newTask(imagineDTO);
+		//生成图片
 		task.setAction(TaskAction.IMAGINE);
+		//提示词
 		task.setPrompt(prompt);
+
 		String promptEn;
+		//搜集指令集
 		int paramStart = prompt.indexOf(" --");
 		if (paramStart > 0) {
+			//翻译
 			promptEn = this.translateService.translateToEnglish(prompt.substring(0, paramStart)).trim() + prompt.substring(paramStart);
 		} else {
 			promptEn = this.translateService.translateToEnglish(prompt).trim();
 		}
+		//为空？？
 		if (CharSequenceUtil.isBlank(promptEn)) {
 			promptEn = prompt;
 		}
+		//排查铭感词
 		if (BannedPromptUtils.isBanned(promptEn)) {
 			return SubmitResultVO.fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词");
 		}
+
+		//以图绘图
 		DataUrl dataUrl = null;
+		//不为空
 		if (CharSequenceUtil.isNotBlank(imagineDTO.getBase64())) {
 			IDataUrlSerializer serializer = new DataUrlSerializer();
 			try {
@@ -82,7 +96,9 @@ public class SubmitController {
 				return SubmitResultVO.fail(ReturnCode.VALIDATION_ERROR, "basisImageBase64格式错误");
 			}
 		}
+		//设置英文词汇
 		task.setPromptEn(promptEn);
+		//任务描述
 		task.setDescription("/imagine " + prompt);
 		return this.taskService.submitImagine(task, dataUrl);
 	}
@@ -201,6 +217,7 @@ public class SubmitController {
 
 	private Task newTask(BaseSubmitDTO base) {
 		Task task = new Task();
+		//随机id 16位
 		task.setId(RandomUtil.randomNumbers(16));
 		task.setSubmitTime(System.currentTimeMillis());
 		task.setState(base.getState());

@@ -76,12 +76,16 @@ public class DiscordServiceImpl implements DiscordService {
 
 	@Override
 	public Message<Void> imagine(String prompt) {
+		//构成json体
 		String paramsStr = this.imagineParamsJson.replace("$guild_id", this.discordGuildId)
 				.replace("$channel_id", this.discordChannelId)
 				.replace("$session_id", this.discordSessionId);
+
 		JSONObject params = new JSONObject(paramsStr);
+		//设置关键词
 		params.getJSONObject("data").getJSONArray("options").getJSONObject(0)
 				.put("value", prompt);
+
 		return postJsonAndCheckStatus(params.toString());
 	}
 
@@ -227,6 +231,11 @@ public class DiscordServiceImpl implements DiscordService {
 		return new RestTemplate().postForEntity(url, httpEntity, String.class);
 	}
 
+	/**
+	 * 返回ost请求
+	 * @param paramsStr
+	 * @return
+	 */
 	private Message<Void> postJsonAndCheckStatus(String paramsStr) {
 		try {
 			ResponseEntity<String> responseEntity = postJson(paramsStr);

@@ -8,16 +8,13 @@ import com.github.novicezk.midjourney.result.Message;
 import com.github.novicezk.midjourney.result.SubmitResultVO;
 import com.github.novicezk.midjourney.service.NotifyService;
 import com.github.novicezk.midjourney.service.TaskStoreService;
+import com.github.novicezk.midjourney.util.MiraiPluginCallback;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
@@ -33,10 +30,17 @@ public class TaskQueueHelper {
 	@Resource
 	private NotifyService notifyService;
 
+	@Resource
+	private MiraiPluginCallback miraiPluginCallback;
+
 	private final ThreadPoolTaskExecutor taskExecutor;
 	private final List<Task> runningTasks;
 	private final Map<String, Future<?>> taskFutureMap = Collections.synchronizedMap(new HashMap<>());
 
+	/**
+	 * 任务请求头部
+	 * @param properties 代理信息
+	 */
 	public TaskQueueHelper(ProxyProperties properties) {
 		ProxyProperties.TaskQueueConfig queueConfig = properties.getQueue();
 		this.runningTasks = new CopyOnWriteArrayList<>();
@@ -104,6 +108,8 @@ public class TaskQueueHelper {
 				task.sleep();
 				changeStatusAndNotify(task, task.getStatus());
 			} while (task.getStatus() == TaskStatus.IN_PROGRESS);
+			//回调
+			miraiPluginCallback.callback(task);
 			log.debug("task finished, id: {}, status: {}", task.getId(), task.getStatus());
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();

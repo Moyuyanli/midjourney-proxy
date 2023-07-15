@@ -11,27 +11,27 @@ import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 import javax.annotation.Resource;
 
 public class BotWebSocketStarter implements WebSocketStarter {
-	@Resource
-	private BotMessageListener botMessageListener;
-	@Resource
-	private DiscordHelper discordHelper;
+    @Resource
+    private BotMessageListener botMessageListener;
+    @Resource
+    private DiscordHelper discordHelper;
 
-	private final ProxyProperties properties;
+    private final ProxyProperties properties;
 
-	public BotWebSocketStarter(ProxyProperties properties) {
-		initProxy(properties);
-		this.properties = properties;
-	}
+    public BotWebSocketStarter(ProxyProperties properties) {
+        initProxy(properties);
+        this.properties = properties;
+    }
 
-	@Override
-	public void start() throws Exception {
-		DefaultShardManagerBuilder builder = DefaultShardManagerBuilder.createDefault(
-				this.properties.getDiscord().getBotToken(), GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT);
-		builder.addEventListeners(this.botMessageListener);
-		WebSocketFactory webSocketFactory = createWebSocketFactory(this.properties);
-		builder.setWebsocketFactory(webSocketFactory);
-		builder.setSessionController(new CustomSessionController(this.discordHelper.getWss()));
-		builder.setRestConfigProvider(value -> new RestConfig().setBaseUrl(this.discordHelper.getServer() + "/api/v10/"));
-		builder.build();
-	}
+    @Override
+    public void start() throws Exception {
+        DefaultShardManagerBuilder builder = DefaultShardManagerBuilder.createDefault(
+                this.properties.getDiscord().getBotToken(), GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT);
+        builder.addEventListeners(this.botMessageListener);
+        WebSocketFactory webSocketFactory = createWebSocketFactory(this.properties);
+        builder.setWebsocketFactory(webSocketFactory);
+        builder.setSessionController(new CustomSessionController(this.discordHelper.getWss()));
+        builder.setRestConfigProvider(value -> new RestConfig().setBaseUrl(this.discordHelper.getServer() + "/api/v10/"));
+        builder.build();
+    }
 }

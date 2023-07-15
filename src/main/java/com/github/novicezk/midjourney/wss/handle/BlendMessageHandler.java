@@ -29,155 +29,155 @@ import java.util.regex.Pattern;
  */
 @Component
 public class BlendMessageHandler extends MessageHandler {
-	private static final String CONTENT_REGEX = "\\*\\*(.*?)\\*\\* - <@\\d+> \\((.*?)\\)";
+    private static final String CONTENT_REGEX = "\\*\\*(.*?)\\*\\* - <@\\d+> \\((.*?)\\)";
 
-	@Override
-	public void handle(MessageType messageType, DataObject message) {
-		Optional<DataObject> interaction = message.optObject("interaction");
-		String content = getMessageContent(message);
-		boolean match = CharSequenceUtil.startWith(content, "**<" + DiscordHelper.SIMPLE_URL_PREFIX) || (interaction.isPresent() && "blend".equals(interaction.get().getString("name")));
-		if (!match) {
-			return;
-		}
-		ContentParseData parseData = parse(content);
-		if (parseData == null) {
-			return;
-		}
-		if (MessageType.CREATE == messageType) {
-			if ("Waiting to start".equals(parseData.getStatus())) {
-				// 开始
-				List<String> urls = CharSequenceUtil.split(parseData.getPrompt(), " ");
-				if (urls.isEmpty()) {
-					return;
-				}
-				String url = getRealUrl(urls.get(0));
-				String taskId = this.discordHelper.findTaskIdWithCdnUrl(url);
-				TaskCondition condition = new TaskCondition()
-						.setId(taskId)
-						.setActionSet(Set.of(TaskAction.BLEND))
-						.setStatusSet(Set.of(TaskStatus.SUBMITTED));
-				Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
-				if (task == null) {
-					return;
-				}
-				task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getString("id"));
-				task.setPrompt(parseData.getPrompt());
-				task.setPromptEn(parseData.getPrompt());
-				task.setStatus(TaskStatus.IN_PROGRESS);
-				task.awake();
-			} else {
-				// 完成
-				TaskCondition condition = new TaskCondition()
-						.setActionSet(Set.of(TaskAction.BLEND))
-						.setStatusSet(Set.of(TaskStatus.SUBMITTED, TaskStatus.IN_PROGRESS));
-				Task task = this.taskQueueHelper.findRunningTask(condition)
-						.max(Comparator.comparing(Task::getProgress))
-						.orElse(null);
-				if (task == null) {
-					return;
-				}
-				task.setProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, parseData.getPrompt());
-				finishTask(task, message);
-				task.awake();
-			}
-		} else if (MessageType.UPDATE == messageType) {
-			// 进度
-			TaskCondition condition = new TaskCondition()
-					.setProgressMessageId(message.getString("id"))
-					.setActionSet(Set.of(TaskAction.BLEND))
-					.setStatusSet(Set.of(TaskStatus.IN_PROGRESS));
-			Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
-			if (task == null) {
-				return;
-			}
-			task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getString("id"));
-			task.setProgress(parseData.getStatus());
-			task.setImageUrl(getImageUrl(message));
-			task.awake();
-		}
-	}
+    @Override
+    public void handle(MessageType messageType, DataObject message) {
+        Optional<DataObject> interaction = message.optObject("interaction");
+        String content = getMessageContent(message);
+        boolean match = CharSequenceUtil.startWith(content, "**<" + DiscordHelper.SIMPLE_URL_PREFIX) || (interaction.isPresent() && "blend".equals(interaction.get().getString("name")));
+        if (!match) {
+            return;
+        }
+        ContentParseData parseData = parse(content);
+        if (parseData == null) {
+            return;
+        }
+        if (MessageType.CREATE == messageType) {
+            if ("Waiting to start".equals(parseData.getStatus())) {
+                // 开始
+                List<String> urls = CharSequenceUtil.split(parseData.getPrompt(), " ");
+                if (urls.isEmpty()) {
+                    return;
+                }
+                String url = getRealUrl(urls.get(0));
+                String taskId = this.discordHelper.findTaskIdWithCdnUrl(url);
+                TaskCondition condition = new TaskCondition()
+                        .setId(taskId)
+                        .setActionSet(Set.of(TaskAction.BLEND))
+                        .setStatusSet(Set.of(TaskStatus.SUBMITTED));
+                Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
+                if (task == null) {
+                    return;
+                }
+                task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getString("id"));
+                task.setPrompt(parseData.getPrompt());
+                task.setPromptEn(parseData.getPrompt());
+                task.setStatus(TaskStatus.IN_PROGRESS);
+                task.awake();
+            } else {
+                // 完成
+                TaskCondition condition = new TaskCondition()
+                        .setActionSet(Set.of(TaskAction.BLEND))
+                        .setStatusSet(Set.of(TaskStatus.SUBMITTED, TaskStatus.IN_PROGRESS));
+                Task task = this.taskQueueHelper.findRunningTask(condition)
+                        .max(Comparator.comparing(Task::getProgress))
+                        .orElse(null);
+                if (task == null) {
+                    return;
+                }
+                task.setProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, parseData.getPrompt());
+                finishTask(task, message);
+                task.awake();
+            }
+        } else if (MessageType.UPDATE == messageType) {
+            // 进度
+            TaskCondition condition = new TaskCondition()
+                    .setProgressMessageId(message.getString("id"))
+                    .setActionSet(Set.of(TaskAction.BLEND))
+                    .setStatusSet(Set.of(TaskStatus.IN_PROGRESS));
+            Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
+            if (task == null) {
+                return;
+            }
+            task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getString("id"));
+            task.setProgress(parseData.getStatus());
+            task.setImageUrl(getImageUrl(message));
+            task.awake();
+        }
+    }
 
-	@Override
-	public void handle(MessageType messageType, Message message) {
-		String content = message.getContentRaw();
-		boolean match = CharSequenceUtil.startWith(content, "**<" + DiscordHelper.SIMPLE_URL_PREFIX) || (message.getInteraction() != null && "blend".equals(message.getInteraction().getName()));
-		if (!match) {
-			return;
-		}
-		ContentParseData parseData = parse(content);
-		if (parseData == null) {
-			return;
-		}
-		if (MessageType.CREATE == messageType) {
-			if ("Waiting to start".equals(parseData.getStatus())) {
-				// 开始
-				List<String> urls = CharSequenceUtil.split(parseData.getPrompt(), " ");
-				if (urls.isEmpty()) {
-					return;
-				}
-				String url = getRealUrl(urls.get(0));
-				String taskId = this.discordHelper.findTaskIdWithCdnUrl(url);
-				TaskCondition condition = new TaskCondition()
-						.setId(taskId)
-						.setActionSet(Set.of(TaskAction.BLEND))
-						.setStatusSet(Set.of(TaskStatus.SUBMITTED));
-				Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
-				if (task == null) {
-					return;
-				}
-				task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getId());
-				task.setPrompt(parseData.getPrompt());
-				task.setPromptEn(parseData.getPrompt());
-				task.setStatus(TaskStatus.IN_PROGRESS);
-				task.awake();
-			} else {
-				// 完成
-				TaskCondition condition = new TaskCondition()
-						.setActionSet(Set.of(TaskAction.BLEND))
-						.setStatusSet(Set.of(TaskStatus.SUBMITTED, TaskStatus.IN_PROGRESS));
-				Task task = this.taskQueueHelper.findRunningTask(condition)
-						.max(Comparator.comparing(Task::getProgress))
-						.orElse(null);
-				if (task == null) {
-					return;
-				}
-				task.setProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, parseData.getPrompt());
-				finishTask(task, message);
-				task.awake();
-			}
-		} else if (MessageType.UPDATE == messageType) {
-			// 进度
-			TaskCondition condition = new TaskCondition()
-					.setProgressMessageId(message.getId())
-					.setActionSet(Set.of(TaskAction.BLEND))
-					.setStatusSet(Set.of(TaskStatus.IN_PROGRESS));
-			Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
-			if (task == null) {
-				return;
-			}
-			task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getId());
-			task.setProgress(parseData.getStatus());
-			task.setImageUrl(getImageUrl(message));
-			task.awake();
-		}
-	}
+    @Override
+    public void handle(MessageType messageType, Message message) {
+        String content = message.getContentRaw();
+        boolean match = CharSequenceUtil.startWith(content, "**<" + DiscordHelper.SIMPLE_URL_PREFIX) || (message.getInteraction() != null && "blend".equals(message.getInteraction().getName()));
+        if (!match) {
+            return;
+        }
+        ContentParseData parseData = parse(content);
+        if (parseData == null) {
+            return;
+        }
+        if (MessageType.CREATE == messageType) {
+            if ("Waiting to start".equals(parseData.getStatus())) {
+                // 开始
+                List<String> urls = CharSequenceUtil.split(parseData.getPrompt(), " ");
+                if (urls.isEmpty()) {
+                    return;
+                }
+                String url = getRealUrl(urls.get(0));
+                String taskId = this.discordHelper.findTaskIdWithCdnUrl(url);
+                TaskCondition condition = new TaskCondition()
+                        .setId(taskId)
+                        .setActionSet(Set.of(TaskAction.BLEND))
+                        .setStatusSet(Set.of(TaskStatus.SUBMITTED));
+                Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
+                if (task == null) {
+                    return;
+                }
+                task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getId());
+                task.setPrompt(parseData.getPrompt());
+                task.setPromptEn(parseData.getPrompt());
+                task.setStatus(TaskStatus.IN_PROGRESS);
+                task.awake();
+            } else {
+                // 完成
+                TaskCondition condition = new TaskCondition()
+                        .setActionSet(Set.of(TaskAction.BLEND))
+                        .setStatusSet(Set.of(TaskStatus.SUBMITTED, TaskStatus.IN_PROGRESS));
+                Task task = this.taskQueueHelper.findRunningTask(condition)
+                        .max(Comparator.comparing(Task::getProgress))
+                        .orElse(null);
+                if (task == null) {
+                    return;
+                }
+                task.setProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, parseData.getPrompt());
+                finishTask(task, message);
+                task.awake();
+            }
+        } else if (MessageType.UPDATE == messageType) {
+            // 进度
+            TaskCondition condition = new TaskCondition()
+                    .setProgressMessageId(message.getId())
+                    .setActionSet(Set.of(TaskAction.BLEND))
+                    .setStatusSet(Set.of(TaskStatus.IN_PROGRESS));
+            Task task = this.taskQueueHelper.findRunningTask(condition).findFirst().orElse(null);
+            if (task == null) {
+                return;
+            }
+            task.setProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, message.getId());
+            task.setProgress(parseData.getStatus());
+            task.setImageUrl(getImageUrl(message));
+            task.awake();
+        }
+    }
 
-	private ContentParseData parse(String content) {
-		Matcher matcher = Pattern.compile(CONTENT_REGEX).matcher(content);
-		if (!matcher.find()) {
-			return null;
-		}
-		ContentParseData parseData = new ContentParseData();
-		parseData.setPrompt(matcher.group(1));
-		parseData.setStatus(matcher.group(2));
-		return parseData;
-	}
+    private ContentParseData parse(String content) {
+        Matcher matcher = Pattern.compile(CONTENT_REGEX).matcher(content);
+        if (!matcher.find()) {
+            return null;
+        }
+        ContentParseData parseData = new ContentParseData();
+        parseData.setPrompt(matcher.group(1));
+        parseData.setStatus(matcher.group(2));
+        return parseData;
+    }
 
-	private String getRealUrl(String url) {
-		if (CharSequenceUtil.startWith(url, "<" + DiscordHelper.SIMPLE_URL_PREFIX)) {
-			return this.discordHelper.getRealUrl(url.substring(1, url.length() - 1));
-		}
-		return url;
-	}
+    private String getRealUrl(String url) {
+        if (CharSequenceUtil.startWith(url, "<" + DiscordHelper.SIMPLE_URL_PREFIX)) {
+            return this.discordHelper.getRealUrl(url.substring(1, url.length() - 1));
+        }
+        return url;
+    }
 
 }

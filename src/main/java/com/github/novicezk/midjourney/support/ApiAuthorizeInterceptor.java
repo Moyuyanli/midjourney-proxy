@@ -11,6 +11,9 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * 权限验证
+ */
 @Component
 @RequiredArgsConstructor
 public class ApiAuthorizeInterceptor implements HandlerInterceptor {
