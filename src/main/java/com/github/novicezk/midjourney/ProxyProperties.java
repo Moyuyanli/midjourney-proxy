@@ -90,10 +90,6 @@ public class ProxyProperties {
 		 * 你的机器人token.
 		 */
 		private String botToken;
-		/**
-		 * mirai插件回调地址
-		 */
-		private String miraiPluginCallbackAddress;
 	}
 
 	@Data
